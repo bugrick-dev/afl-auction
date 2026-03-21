@@ -291,7 +291,10 @@ function buildCard(id, item) {
     <div class="card-header">
       ${photoThumb}
       <div class="card-status">${statusBadge}${timerHtml}</div>
-      <div class="card-title">${esc(item.name)}</div>
+      <div style="display:flex;align-items:baseline;gap:8px;">
+        <div class="card-title">${esc(item.name)}</div>
+        ${item.itemNumber ? `<span style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;">#${String(item.itemNumber).padStart(3,'0')}</span>` : ''}
+      </div>
       ${item.city ? `<div style="font-size:11px;color:var(--text3);margin-top:2px;">📍 ${esc(item.city)}${item.district ? ' / '+esc(item.district) : ''}</div>` : ''}
       ${item.desc ? `<div class="card-desc">${esc(item.desc)}</div>` : ''}
     </div>
@@ -306,7 +309,6 @@ function buildCard(id, item) {
     <div class="card-footer">
       <span class="bid-count">${item.bidCount || 0} teklif</span>
       <div style="display:flex;align-items:center;gap:8px;">
-        ${item.itemNumber ? `<span style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;">#${String(item.itemNumber).padStart(3,'0')}</span>` : ''}
         ${item.createdBy ? `<span style="font-size:11px;color:var(--text3);">ekleyen: ${esc(item.createdBy)}</span>` : ''}
         <button class="btn-delete" data-delete-id="${id}" title="Ürünü sil">✕</button>
       </div>
