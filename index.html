@@ -81,22 +81,9 @@
           <input type="text" id="item-district" placeholder="Kadıköy" maxlength="40">
         </div>
       </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Başlangıç fiyatı (₺)</label>
-          <input type="number" id="item-start" placeholder="0" min="0">
-        </div>
-        <div class="form-group">
-          <label>Süre</label>
-          <div style="display:flex;gap:10px;align-items:center;">
-            <input type="number" id="timer-h" placeholder="0" min="0" max="23" value="0" style="text-align:center;font-size:22px;font-weight:600;padding:12px 8px;width:70px;">
-            <span style="color:var(--text2);font-size:13px;white-space:nowrap;">sa</span>
-            <input type="number" id="timer-m" placeholder="0" min="0" max="59" value="1" style="text-align:center;font-size:22px;font-weight:600;padding:12px 8px;width:70px;">
-            <span style="color:var(--text2);font-size:13px;white-space:nowrap;">dk</span>
-            <input type="number" id="timer-s" placeholder="0" min="0" max="59" value="0" style="text-align:center;font-size:22px;font-weight:600;padding:12px 8px;width:70px;">
-            <span style="color:var(--text2);font-size:13px;white-space:nowrap;">sn</span>
-          </div>
-        </div>
+      <div class="form-group">
+        <label>Başlangıç fiyatı (₺)</label>
+        <input type="number" id="item-start" placeholder="0" min="0">
       </div>
       <div class="form-group">
         <label>Fotoğraflar (isteğe bağlı, çoklu seçilebilir)</label>
@@ -106,7 +93,7 @@
       <button class="btn btn-gold" onclick="addItem()" style="width:100%;justify-content:center;margin-top:4px;">
         Mezata Ekle
       </button>
-      <p class="admin-note">Ürünler duraklatılmış olarak eklenir — süreyi başlatmak için karttaki "Başlat" butonuna tıkla.</p>
+      <p class="admin-note">Ürün eklendiği an mezat başlar, 24 saat sürer.</p>
     </div>
   </div>
 

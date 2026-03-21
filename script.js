@@ -147,10 +147,7 @@ window.addItem = async function() {
   const city = document.getElementById('item-city').value.trim();
   const district = document.getElementById('item-district').value.trim();
   const start = parseFloat(document.getElementById('item-start').value) || 0;
-  const th = parseInt(document.getElementById('timer-h').value) || 0;
-  const tm = parseInt(document.getElementById('timer-m').value) || 0;
-  const ts = parseInt(document.getElementById('timer-s').value) || 0;
-  const seconds = th * 3600 + tm * 60 + ts || 60;
+  const seconds = 24 * 3600; // 24 saat sabit
   const fileInput = document.getElementById('item-photo');
   const files = fileInput ? Array.from(fileInput.files) : [];
   if (!name) { toast('Ürün adı gerekli', 'error'); return; }
@@ -170,9 +167,10 @@ window.addItem = async function() {
     }
   }
 
+  const endTime = Date.now() + seconds * 1000;
   const item = {
     name, desc, startPrice: start, currentPrice: start,
-    duration: seconds, status: 'waiting', bidCount: 0,
+    duration: seconds, status: 'active', endTime, bidCount: 0,
     topBidder: null, createdBy: currentUser, createdAt: Date.now(),
     photos: photos.length ? photos : null,
     city: city || null,
@@ -184,6 +182,7 @@ window.addItem = async function() {
     const demoCount = Object.keys(demoItems).length + Object.values(historyCache).length + 1;
     demoItems[id] = { ...item, itemNumber: demoCount };
     renderItems(demoItems);
+    registerTimer(id, endTime);
   } else {
     get(ref(db, 'meta/itemCounter')).then(snap => {
       const next = (snap.val() || 0) + 1;
@@ -193,15 +192,13 @@ window.addItem = async function() {
   }
 
   ['item-name','item-desc','item-start','item-city','item-district'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('timer-h').value = '0';
-  document.getElementById('timer-m').value = '1';
-  document.getElementById('timer-s').value = '0';
+
   if (fileInput) fileInput.value = '';
   document.getElementById('photo-preview-wrap').innerHTML = '';
   btn.disabled = false;
   btn.textContent = 'Mezata Ekle';
   showTab('live');
-  toast('Ürün eklendi! Hazır olunca Başlat\'a bas.', 'success');
+  toast('Ürün eklendi! Mezat başladı.', 'success');
 };
 
 // ─── RENDER ITEMS ─────────────────────────────────────
@@ -231,9 +228,7 @@ function renderItems(data) {
   ids.forEach(id => {
     const item = data[id];
     const bidBtn = document.getElementById('bid-btn-'+id);
-    const startBtn = document.getElementById('start-btn-'+id);
     if (bidBtn) bidBtn.onclick = () => placeBid(id, item);
-    if (startBtn) startBtn.onclick = () => startItem(id, item);
 
 
     if (item.status === 'active' && item.endTime && !activeEndTimes[id]) {
@@ -255,13 +250,13 @@ function buildCard(id, item) {
     timerHtml = `<span class="timer${secsLeft <= 10 ? ' urgent' : ''}" id="timer-${id}">${fmtTime(secsLeft)}</span>`;
     actionHtml = `
       <div class="bid-row">
-        <input type="number" id="bid-input-${id}" placeholder="${Math.ceil(price + 1)}" min="${price + 0.01}" step="any">
+        <input type="number" id="bid-input-${id}" placeholder="min. ₺${fmt(item.currentPrice + 50)}" min="${item.currentPrice + 50}" step="any">
         <button class="btn btn-gold btn-sm" id="bid-btn-${id}">Teklif Ver</button>
       </div>`;
   } else if (isWaiting) {
     statusBadge = `<span class="status-badge badge-waiting">Bekliyor</span>`;
     timerHtml = `<span style="font-family:'DM Mono',monospace;font-size:14px;color:var(--text3);">${fmtTime(item.duration)}</span>`;
-    actionHtml = `<button class="btn btn-ghost btn-sm" id="start-btn-${id}">▶ Başlat</button>`;
+    actionHtml = '';
   } else {
     statusBadge = `<span class="status-badge badge-sold">Satıldı</span>`;
     timerHtml = `<span style="font-family:'DM Mono',monospace;font-size:14px;color:var(--text3);">—</span>`;
@@ -360,7 +355,7 @@ function startItem(id, item) {
   } else {
     update(ref(db, 'items/'+id), update_data);
   }
-  toast(`"${item.name}" başladı!`, 'success');
+  toast(`"${item.name}" başladı!`, 'success'); // kept for legacy waiting items
 }
 
 // ─── END ITEM ─────────────────────────────────────────
@@ -397,8 +392,8 @@ window.placeBid = function(id, item) {
   if (!currentUser) { toast('Önce isim gir', 'error'); return; }
   const input = document.getElementById('bid-input-'+id);
   const amount = parseFloat(input.value);
-  if (!amount || amount <= item.currentPrice) {
-    toast(`Teklif mevcut fiyattan yüksek olmalı: ₺${fmt(item.currentPrice)}`, 'error');
+  if (!amount || amount < item.currentPrice + 50) {
+    toast(`Teklif en az ₺${fmt(item.currentPrice + 50)} olmalı (+50₺)`, 'error');
     return;
   }
 
