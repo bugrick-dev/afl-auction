@@ -36,7 +36,7 @@ try {
 let currentUser = localStorage.getItem('auction_name') || null;
 let globalTicker = null;
 let activeEndTimes = {};
-const photoCache = {}; // id -> array of base64 dataURLs
+const photoCache = {}; // id -> array of photo URLs
 
 // ─── NAME GATE ────────────────────────────────────────
 window.joinAuction = function() {
@@ -101,7 +101,6 @@ function cleanupExpired(historyData) {
   Object.entries(historyData).forEach(([id, item]) => {
     if (item.soldAt && (now - item.soldAt) > EXPIRE_MS) {
       remove(ref(db, 'history/' + id));
-
     }
   });
 }
@@ -111,18 +110,21 @@ function setupDemoMode() {
   renderItems(demoItems);
 }
 
-// ─── ADD ITEM ─────────────────────────────────────────
-// ─── COMPRESS IMAGE ───────────────────────────────────
-function blobToBase64(blob) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = e => resolve(e.target.result);
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
+// ─── IMAGE UPLOAD ────────────────────────────────────
+async function uploadToCloudinary(blob) {
+  const formData = new FormData();
+  formData.append('file', blob, 'photo.jpg');
+  formData.append('upload_preset', 'my_upload_preset');
+  const res = await fetch('https://api.cloudinary.com/v1_1/driux2u1q/image/upload', {
+    method: 'POST',
+    body: formData
   });
+  const data = await res.json();
+  if (!data.secure_url) throw new Error('Cloudinary upload failed');
+  return data.secure_url;
 }
 
-function compressImage(file, maxW=1200, quality=0.75) {
+function compressImage(file, maxW=800, quality=0.6) {
   return new Promise(resolve => {
     const img = new Image();
     const url = URL.createObjectURL(file);
@@ -160,10 +162,10 @@ window.addItem = async function() {
   for (const file of files) {
     try {
       const compressed = await compressImage(file);
-      const b64 = await blobToBase64(compressed);
-      photos.push(b64);
+      const url = await uploadToCloudinary(compressed);
+      photos.push(url);
     } catch(e) {
-      toast('Bir fotoğraf işlenemedi, atlanıyor', 'error');
+      toast('Bir fotoğraf yüklenemedi, atlanıyor', 'error');
     }
   }
 
@@ -230,7 +232,6 @@ function renderItems(data) {
     const bidBtn = document.getElementById('bid-btn-'+id);
     if (bidBtn) bidBtn.onclick = () => placeBid(id, item);
 
-
     if (item.status === 'active' && item.endTime && !activeEndTimes[id]) {
       registerTimer(id, item.endTime);
     }
@@ -239,7 +240,6 @@ function renderItems(data) {
 
 function buildCard(id, item) {
   const isActive = item.status === 'active';
-  const isWaiting = item.status === 'waiting';
   const price = item.currentPrice;
   const currency = '₺';
   let statusBadge, timerHtml, actionHtml;
@@ -253,10 +253,6 @@ function buildCard(id, item) {
         <input type="number" id="bid-input-${id}" placeholder="min. ₺${fmt(item.currentPrice + 50)}" min="${item.currentPrice + 50}" step="any">
         <button class="btn btn-gold btn-sm" id="bid-btn-${id}">Teklif Ver</button>
       </div>`;
-  } else if (isWaiting) {
-    statusBadge = `<span class="status-badge badge-waiting">Bekliyor</span>`;
-    timerHtml = `<span style="font-family:'DM Mono',monospace;font-size:14px;color:var(--text3);">${fmtTime(item.duration)}</span>`;
-    actionHtml = '';
   } else {
     statusBadge = `<span class="status-badge badge-sold">Satıldı</span>`;
     timerHtml = `<span style="font-family:'DM Mono',monospace;font-size:14px;color:var(--text3);">—</span>`;
@@ -342,20 +338,6 @@ function tickAll() {
       endItem(id);
     }
   }
-}
-
-// ─── START ITEM ───────────────────────────────────────
-function startItem(id, item) {
-  const endTime = Date.now() + item.duration * 1000;
-  const update_data = { status: 'active', endTime };
-  if (demoMode) {
-    demoItems[id] = { ...demoItems[id], ...update_data };
-    renderItems(demoItems);
-    registerTimer(id, endTime);
-  } else {
-    update(ref(db, 'items/'+id), update_data);
-  }
-  toast(`"${item.name}" başladı!`, 'success'); // kept for legacy waiting items
 }
 
 // ─── END ITEM ─────────────────────────────────────────
@@ -592,7 +574,6 @@ window.goThumb = function(e, id, idx) {
 window.closeLightbox = function() {
   document.getElementById('lightbox').style.display = 'none';
 };
-
 
 
 // ─── HELPERS ──────────────────────────────────────────
